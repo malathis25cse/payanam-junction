@@ -1,0 +1,6 @@
+*.class
+*.db
+*.db-shm
+*.db-wal
+.vscode/
+*.log
