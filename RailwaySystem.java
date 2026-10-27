@@ -373,7 +373,8 @@ private void lockPlatforms(Connection conn) throws SQLException {
                 TrainService train = trains.get(trainId);
 
                 boolean hadSeat = Reservation.CONFIRMED.equals(r.getStatus());
-                Reservation promoted = train.cancelBooking(r);   // may promote the oldest waiting passenger
+                Reservation promoted = train.cancelBooking(r);  
+                 // may promote the oldest waiting passenger
 
                 // free the seat first, then give it to the promoted passenger (seat numbers are UNIQUE)
                 try (PreparedStatement ps = conn.prepareStatement(
