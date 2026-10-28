@@ -27,7 +27,8 @@ public class WebServer {
     private static final Map<String, UserAuth.AuthUser> sessions =
             new ConcurrentHashMap<>();
 
-    public static void main(String[] args) throws IOException {
+
+            public static void main(String[] args) throws IOException {
         try {
     DBConnection.testConnection();
 
@@ -116,22 +117,40 @@ private static String homePage() {
 }
 
 
-    private static String trainsPage() throws SQLException {
-        StringBuilder sb = new StringBuilder("<table><tr><th>ID</th><th>Train</th><th>Route</th><th>Arrival</th>"
-                + "<th>Departure</th><th>Length (m)</th><th>Free seats</th><th>Waiting</th><th>Delay (arr/dep)</th></tr>");
-        for (TrainService t : system.getTrains()) {
-            sb.append("<tr><td>").append(t.getTrainId()).append("</td><td>").append(esc(t.getTrainName()))
-              .append("</td><td>").append(esc(t.getOrigin())).append(" &rarr; ").append(esc(t.getDestination()))
-              .append("</td><td>").append(RailwaySystem.formatTime(t.getEffectiveArrival()))
-              .append("</td><td>").append(RailwaySystem.formatTime(t.getEffectiveDeparture()))
-              .append("</td><td>").append(t.getTrainLength())
-              .append("</td><td>").append(t.availableSeats()).append(" / ").append(TrainService.TOTAL_SEATS)
-              .append("</td><td>").append(t.waitingCount())
-              .append("</td><td>+").append(t.getArrivalDelay()).append(" / +").append(t.getDepartureDelay())
-              .append("</td></tr>");
-        }
-        return page("Trains", sb.append("</table>").toString());
+    
+private static String trainsPage() throws SQLException {
+    StringBuilder sb = new StringBuilder(
+        "<table><tr><th>ID</th><th>Train</th><th>Route</th><th>Arrival</th>"
+        + "<th>Departure</th><th>Length (m)</th><th>Free seats</th>"
+        + "<th>Waiting</th><th>Delay (arr/dep)</th></tr>"
+    );
+
+    for (TrainService t : system.getTrains()) {
+        sb.append("<tr><td>").append(t.getTrainId())
+          .append("</td><td>").append(esc(t.getTrainName()))
+          .append("</td><td>").append(esc(t.getOrigin()))
+          .append(" &rarr; ").append(esc(t.getDestination()))
+          .append("</td><td>").append(RailwaySystem.formatTime(t.getEffectiveArrival()))
+          .append("</td><td>").append(RailwaySystem.formatTime(t.getEffectiveDeparture()))
+          .append("</td><td>").append(t.getTrainLength())
+          .append("</td><td>").append(t.availableSeats())
+          .append(" / ").append(TrainService.TOTAL_SEATS)
+          .append("</td><td>").append(t.waitingCount())
+          .append("</td><td>+").append(t.getArrivalDelay())
+          .append(" / +").append(t.getDepartureDelay())
+          .append("</td></tr>");
     }
+
+    sb.append("</table>");
+
+    sb.append("<div style='margin-top:20px; text-align:center;'>")
+      .append("<a href='/dashboard' class='service-btn'>")
+      .append("← Back to User Dashboard")
+      .append("</a></div>");
+
+    return page("Trains", sb.toString());
+}
+
 
     private static String passengersPage(Map<String, String> f, boolean post) throws SQLException {
         String msg = "";
@@ -156,31 +175,52 @@ private static String homePage() {
         return page("Passenger registration", sb.append("</table>").toString());
     }
 
-    private static String bookPage(Map<String, String> f, boolean post) throws SQLException {
-        String msg = "";
-        if (post) {
-            try {
-                msg = system.bookTicket(Integer.parseInt(val(f, "train_id")), Integer.parseInt(val(f, "passenger_id")));
-            } catch (NumberFormatException e) {
-                msg = "ERROR: Please choose a train and a passenger.";
-            }
+    
+private static String bookPage(Map<String, String> f, boolean post) throws SQLException {
+    String msg = "";
+
+    if (post) {
+        try {
+            msg = system.bookTicket(
+                Integer.parseInt(val(f, "train_id")),
+                Integer.parseInt(val(f, "passenger_id"))
+            );
+        } catch (NumberFormatException e) {
+            msg = "ERROR: Please choose a train and a passenger.";
         }
-        StringBuilder sb = new StringBuilder(message(msg));
-        sb.append("<form method='post' action='/book'><label>Train</label><select name='train_id'>");
-        for (TrainService t : system.getTrains()) {
-            sb.append("<option value='").append(t.getTrainId()).append("'>").append(t.getTrainId()).append(" - ")
-              .append(esc(t.getTrainName())).append(" (").append(t.availableSeats()).append(" free, ")
-              .append(t.waitingCount()).append(" waiting)</option>");
-        }
-        sb.append("</select><label>Passenger</label><select name='passenger_id'>");
-        for (Passenger p : system.getPassengers()) {
-            sb.append("<option value='").append(p.getPassengerId()).append("'>").append(p.getPassengerId())
-              .append(" - ").append(esc(p.getName())).append("</option>");
-        }
-        sb.append("</select><button>Book ticket</button></form>")
-          .append("<p>If the train is full, the passenger joins the FIFO waiting list automatically.</p>");
-        return page("Book a ticket", sb.toString());
     }
+
+    StringBuilder sb = new StringBuilder(message(msg));
+
+    sb.append("<form method='post' action='/book'><label>Train</label><select name='train_id'>");
+
+    for (TrainService t : system.getTrains()) {
+        sb.append("<option value='").append(t.getTrainId()).append("'>")
+          .append(t.getTrainId()).append(" - ")
+          .append(esc(t.getTrainName())).append(" (")
+          .append(t.availableSeats()).append(" free, ")
+          .append(t.waitingCount()).append(" waiting)</option>");
+    }
+
+    sb.append("</select><label>Passenger</label><select name='passenger_id'>");
+
+    for (Passenger p : system.getPassengers()) {
+        sb.append("<option value='").append(p.getPassengerId()).append("'>")
+          .append(p.getPassengerId()).append(" - ")
+          .append(esc(p.getName())).append("</option>");
+    }
+
+    sb.append("</select><button>Book ticket</button></form>")
+      .append("<p>If the train is full, the passenger joins the FIFO waiting list automatically.</p>");
+
+    // Back to User Dashboard button
+    sb.append("<div style='margin-top:20px; text-align:center;'>")
+      .append("<a href='/dashboard' class='service-btn'>")
+      .append("← Back to User Dashboard")
+      .append("</a></div>");
+
+    return page("Book a ticket", sb.toString());
+}
 
     private static String cancelPage(Map<String, String> f, boolean post) throws SQLException {
         String msg = "";
@@ -202,42 +242,91 @@ private static String homePage() {
               .append("<form method='post' action='/cancel' style='margin:0'><input type='hidden' name='reservation_id' value='")
               .append(r.getReservationId()).append("'><button class='small'>Cancel</button></form></td></tr>");
         }
-        return page("Cancel a ticket", sb.append("</table>").toString());
-    }
-
-    private static String reservationsPage(Map<String, String> f) throws SQLException {
-        int trainId = 0;
-        try { trainId = Integer.parseInt(val(f, "train_id")); } catch (NumberFormatException e) { /* show all */ }
-        StringBuilder sb = new StringBuilder("<form method='get' action='/reservations'><label>Show train</label>"
-                + "<select name='train_id'><option value='0'>All trains</option>");
-        for (TrainService t : system.getTrains()) {
-            sb.append("<option value='").append(t.getTrainId()).append("'")
-              .append(t.getTrainId() == trainId ? " selected" : "").append(">").append(t.getTrainId()).append(" - ")
-              .append(esc(t.getTrainName())).append("</option>");
-        }
-        sb.append("</select><button>Show</button></form>")
-          .append("<table><tr><th>ResID</th><th>Train</th><th>Passenger</th><th>Seat</th><th>Status</th><th>Booked at</th></tr>");
-        for (Reservation r : system.getReservations(trainId)) {
-            sb.append("<tr><td>").append(r.getReservationId()).append("</td><td>").append(r.getTrainId())
-              .append("</td><td>").append(esc(r.getPassengerName())).append("</td><td>").append(r.seatText())
-              .append("</td><td class='").append(r.getStatus().toLowerCase()).append("'>").append(r.getStatus())
-              .append("</td><td>").append(esc(r.getBookedAt())).append("</td></tr>");
-        }
-        return page("Reservations", sb.append("</table>").toString());
-    }
-
-    private static String waitingPage() throws SQLException {
-        StringBuilder sb = new StringBuilder("<table><tr><th>Train</th><th>Queue position</th><th>ResID</th><th>Passenger</th></tr>");
-        List<Reservation> list = system.getWaitingList(0);
-        for (Reservation r : list) {
-            sb.append("<tr><td>").append(r.getTrainId()).append("</td><td>").append(r.getWaitingPosition())
-              .append("</td><td>").append(r.getReservationId()).append("</td><td>").append(esc(r.getPassengerName()))
-              .append("</td></tr>");
-        }
         sb.append("</table>");
-        if (list.isEmpty()) sb.append("<p>The waiting list is empty.</p>");
-        return page("Waiting lists (first in, first out)", sb.toString());
+
+sb.append("<div style='margin-top:20px; text-align:center;'>")
+  .append("<a href='/dashboard' class='service-btn'>")
+  .append("← Back to User Dashboard")
+  .append("</a>")
+  .append("</div>");
+
+return page("Cancel a ticket", sb.toString());
     }
+
+    
+private static String reservationsPage(Map<String, String> f) throws SQLException {
+    int trainId = 0;
+
+    try {
+        trainId = Integer.parseInt(val(f, "train_id"));
+    } catch (NumberFormatException e) {
+        // Show all reservations
+    }
+
+    StringBuilder sb = new StringBuilder(
+        "<form method='get' action='/reservations'><label>Show train</label>"
+        + "<select name='train_id'><option value='0'>All trains</option>"
+    );
+
+    for (TrainService t : system.getTrains()) {
+        sb.append("<option value='").append(t.getTrainId()).append("'")
+          .append(t.getTrainId() == trainId ? " selected" : "")
+          .append(">").append(t.getTrainId()).append(" - ")
+          .append(esc(t.getTrainName())).append("</option>");
+    }
+
+    sb.append("</select><button>Show</button></form>")
+      .append("<table><tr><th>ResID</th><th>Train</th><th>Passenger</th>"
+          + "<th>Seat</th><th>Status</th><th>Booked at</th></tr>");
+
+    for (Reservation r : system.getReservations(trainId)) {
+        sb.append("<tr><td>").append(r.getReservationId())
+          .append("</td><td>").append(r.getTrainId())
+          .append("</td><td>").append(esc(r.getPassengerName()))
+          .append("</td><td>").append(r.seatText())
+          .append("</td><td class='").append(r.getStatus().toLowerCase())
+          .append("'>").append(r.getStatus())
+          .append("</td><td>").append(esc(r.getBookedAt()))
+          .append("</td></tr>");
+    }
+
+    sb.append("</table>");
+
+    // Back to User Dashboard
+    sb.append("<div style='margin-top:20px; text-align:center;'>")
+      .append("<a href='/dashboard' class='service-btn'>")
+      .append("← Back to User Dashboard")
+      .append("</a></div>");
+
+    return page("Reservations", sb.toString());
+}
+
+
+    
+private static String waitingPage() throws SQLException {
+    StringBuilder sb = new StringBuilder("<table><tr><th>Train</th><th>Queue position</th><th>ResID</th><th>Passenger</th></tr>");
+
+    List<Reservation> list = system.getWaitingList(0);
+
+    for (Reservation r : list) {
+        sb.append("<tr><td>").append(r.getTrainId()).append("</td><td>").append(r.getWaitingPosition())
+          .append("</td><td>").append(r.getReservationId()).append("</td><td>").append(esc(r.getPassengerName()))
+          .append("</td></tr>");
+    }
+
+    sb.append("</table>");
+
+    if (list.isEmpty()) {
+        sb.append("<p>The waiting list is empty.</p>");
+    }
+
+    sb.append("<div style='margin-top:20px; text-align:center;'>")
+      .append("<a href='/dashboard' class='service-btn'>")
+      .append("← Back to User Dashboard")
+      .append("</a></div>");
+
+    return page("Waiting lists (first in, first out)", sb.toString());
+}
 
     
 private static String platformsPage(
@@ -1183,7 +1272,10 @@ private static String passengerRegistrationPage(
 
         + "</form>"
 
-        + "<p><a href='/dashboard'>Back to User Dashboard</a></p>"
+        + "<div style='margin-top:20px; text-align:center;'>"
++ "<a href='/dashboard' class='service-btn'>"
++ "← Back to User Dashboard"
++ "</a></div>"
     );
 }
 
